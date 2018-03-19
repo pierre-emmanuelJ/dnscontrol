@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -220,6 +221,8 @@ func (c *Bind) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Correcti
 		// errors will be reported.
 		fmt.Printf("Could not read zonefile: %v\n", err)
 	} else {
+		x, err := ioutil.ReadAll(foundFH)
+		fmt.Printf("DEBUG: %v %v\n", err, string(x))
 		for x := range dns.ParseZone(foundFH, dc.Name, zonefile) {
 			if x.Error != nil {
 				log.Println("Error in zonefile:", x.Error)

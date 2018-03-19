@@ -8,8 +8,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/tdewolff/minify"
-	minjson "github.com/tdewolff/minify/json"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -31,8 +30,6 @@ func TestParsedFiles(t *testing.T) {
 		if filepath.Ext(f.Name()) != ".js" || !unicode.IsNumber(rune(f.Name()[0])) {
 			continue
 		}
-		m := minify.New()
-		m.AddFunc("json", minjson.Minify)
 		t.Run(f.Name(), func(t *testing.T) {
 			content, err := ioutil.ReadFile(filepath.Join(testDir, f.Name()))
 			if err != nil {
@@ -46,25 +43,24 @@ func TestParsedFiles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			actualJSON, err = m.Bytes("json", actualJSON)
+			var actualI map[string]interface{}
+			err = json.Unmarshal(actualJSON, &actualI)
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			expectedFile := filepath.Join(testDir, f.Name()[:len(f.Name())-3]+".json")
 			expectedData, err := ioutil.ReadFile(expectedFile)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			expectedJSON, err := m.String("json", string(expectedData))
+			var expectedI map[string]interface{}
+			err = json.Unmarshal(expectedData, &expectedI)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if string(expectedJSON) != string(actualJSON) {
-				t.Error("Expected and actual json don't match")
-				t.Log("Expected:", string(expectedJSON))
-				t.Log("Actual  :", string(actualJSON))
-			}
+
+			assert.Equal(t, expectedI, actualI)
 		})
 	}
 }

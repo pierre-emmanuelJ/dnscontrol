@@ -14,7 +14,6 @@ import (
 	"github.com/StackExchange/dnscontrol/providers"
 	_ "github.com/StackExchange/dnscontrol/providers/_all"
 	"github.com/StackExchange/dnscontrol/providers/config"
-	"github.com/miekg/dns/dnsutil"
 	"github.com/pkg/errors"
 )
 
@@ -106,7 +105,7 @@ func runTests(t *testing.T, prv providers.DNSServiceProvider, domainName string,
 			}
 			dom, _ := dc.Copy()
 			for _, r := range tst.Records {
-				rc := models.RecordConfig(*r)
+				rc := models.RecordConfig(*r.recAlias)
 				if strings.Contains(rc.GetTargetField(), "**current-domain**") {
 					rc.SetTarget(strings.Replace(rc.GetTargetField(), "**current-domain**", domainName, 1) + ".")
 				}
@@ -205,19 +204,27 @@ type TestCase struct {
 	IgnoredLabels []string
 }
 
-type rec models.RecordConfig
+type recAlias models.RecordConfig
+type rec struct {
+	*recAlias
+}
 
 func (r *rec) GetLabel() string {
-	return r.Name
+	//return r.GetLabel()
+	return ((*models.RecordConfig)((*r).recAlias)).GetLabel()
 }
 
 func (r *rec) SetLabel(label, domain string) {
-	r.Name = label
-	r.NameFQDN = dnsutil.AddOrigin(label, "**current-domain**")
+	//r.Name = label
+	//r.NameFQDN = dnsutil.AddOrigin(label, "**current-domain**")
+
+	// Reach into the rec, get the recAlias, convert it to a models.RecordConfig, and call .SetLabel().
+	((*models.RecordConfig)((*r).recAlias)).SetLabel(label, domain)
 }
 
 func (r *rec) SetTarget(target string) {
-	r.Target = target
+	//r.Target = target
+	((*models.RecordConfig)((*r).recAlias)).SetTarget(target)
 }
 
 func a(name, target string) *rec {
@@ -292,20 +299,17 @@ func tlsa(name string, usage, selector, matchingtype uint8, target string) *rec 
 }
 
 func ignore(name string) *rec {
-	r := &rec{
-		Type: "IGNORE",
-	}
-	r.SetLabel(name, "**current-domain**")
-	return r
+	return makeRec(name, "**current-domain**", "IGNORE")
 }
 
 func makeRec(name, target, typ string) *rec {
-	r := &rec{
-		Type: typ,
-		TTL:  300,
-	}
+	r := &rec{}
+	r.recAlias = &recAlias{}
+	r.Type = typ
+	r.TTL = 300
 	r.SetLabel(name, "**current-domain**")
 	r.SetTarget(target)
+	//fmt.Printf("DEBUG: makeRec=%+v\n", *r.recAlias)
 	return r
 }
 

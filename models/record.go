@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -62,10 +63,10 @@ import (
 //  rec.Label() == "@"   // Is this record at the apex?
 //
 type RecordConfig struct {
-	Type             string            `json:"type"`   // All caps rtype name.
-	Name             string            `json:"name"`   // The short name. See above.
-	NameFQDN         string            `json:"-"`      // Must end with ".$origin". See above.
-	Target           string            `json:"target"` // If a name, must end with "."
+	Type             string            `json:"type"` // All caps rtype name.
+	name             string            // The short name. See above.
+	nameFQDN         string            // Must end with ".$origin". See above.
+	target           string            // If a name, must end with "."
 	TTL              uint32            `json:"ttl,omitempty"`
 	Metadata         map[string]string `json:"meta,omitempty"`
 	MxPreference     uint16            `json:"mxpreference,omitempty"`
@@ -81,6 +82,47 @@ type RecordConfig struct {
 	R53Alias         map[string]string `json:"r53_alias,omitempty"`
 
 	Original interface{} `json:"-"` // Store pointer to provider-specific record object. Used in diffing.
+}
+
+// RecordConfigAlias is an alias of RecordConfig. We use an alias because aliases
+// are stripped of any functions and we need a struct without
+// MarshalJSON/UnmarshalJSON defined, otherwise we'd get a recursive defintion.
+type RecordConfigAlias RecordConfig
+
+// RecordConfigJSON represents out we represent RecordConfig to the JSON package.
+type RecordConfigJSON struct {
+	*RecordConfigAlias // All the exported fields.
+	// The unexported fields all have equivalents here:
+	Name   string `json:"name"`
+	Target string `json:"target"`
+}
+
+// MarshalJSON marshals a RecordConfig. (struct to JSON)
+func (rc *RecordConfig) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&RecordConfigJSON{
+		RecordConfigAlias: (*RecordConfigAlias)(rc),
+		// Unexported or custom-formatted fields are listed here:
+		Name:   rc.name,
+		Target: rc.target,
+	})
+}
+
+// UnmarshalJSON unmarshals a RecordConfig. (JSON to struct)
+func (rc *RecordConfig) UnmarshalJSON(data []byte) error {
+	temp := &RecordConfigJSON{
+		RecordConfigAlias: (*RecordConfigAlias)(rc),
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	// Copy the exported fields:
+	*rc = (RecordConfig)(*(temp).RecordConfigAlias)
+	// Each unexported field must be copied and/or converted individually:
+	rc.name = temp.Name
+	rc.target = temp.Target
+
+	return nil
 }
 
 // Copy returns a deep copy of a RecordConfig.
@@ -112,11 +154,11 @@ func (rc *RecordConfig) SetLabel(short, origin string) {
 	short = strings.ToLower(short)
 	origin = strings.ToLower(origin)
 	if short == "" || short == "@" {
-		rc.Name = "@"
-		rc.NameFQDN = origin
+		rc.name = "@"
+		rc.nameFQDN = origin
 	} else {
-		rc.Name = short
-		rc.NameFQDN = dnsutil.AddOrigin(short, origin)
+		rc.name = short
+		rc.nameFQDN = dnsutil.AddOrigin(short, origin)
 	}
 }
 
@@ -125,7 +167,7 @@ func (rc *RecordConfig) SetLabel(short, origin string) {
 // on copies of a RecordConfig that is being used for non-standard things like
 // Marshalling yaml.
 func (rc *RecordConfig) UnsafeSetLabelNull() {
-	rc.Name = ""
+	rc.name = ""
 }
 
 // SetLabelFromFQDN sets the .Name/.NameFQDN fields given a FQDN and origin.
@@ -148,8 +190,8 @@ func (rc *RecordConfig) SetLabelFromFQDN(fqdn, origin string) {
 
 	fqdn = strings.ToLower(fqdn)
 	origin = strings.ToLower(origin)
-	rc.Name = dnsutil.TrimDomainName(fqdn, origin)
-	rc.NameFQDN = fqdn
+	rc.name = dnsutil.TrimDomainName(fqdn, origin)
+	rc.nameFQDN = fqdn
 }
 
 // GetLabel returns the shortname of the label associated with this RecordConfig.
@@ -158,13 +200,13 @@ func (rc *RecordConfig) SetLabelFromFQDN(fqdn, origin string) {
 //   domain is "foo.com" then the FQDN is actually "foo.com.foo.com").
 // It will never be "" (the apex is returned as "@").
 func (rc *RecordConfig) GetLabel() string {
-	return rc.Name
+	return rc.name
 }
 
 // GetLabelFQDN returns the FQDN of the label associated with this RecordConfig.
 // It will not end with ".".
 func (rc *RecordConfig) GetLabelFQDN() string {
-	return rc.NameFQDN
+	return rc.nameFQDN
 }
 
 // ToRR converts a RecordConfig to a dns.RR.
@@ -180,7 +222,7 @@ func (rc *RecordConfig) ToRR() dns.RR {
 	rr := dns.TypeToRR[rdtype]()
 
 	// Fill in the header.
-	rr.Header().Name = rc.NameFQDN + "."
+	rr.Header().Name = rc.nameFQDN + "."
 	rr.Header().Rrtype = rdtype
 	rr.Header().Class = dns.ClassINET
 	rr.Header().Ttl = rc.TTL
@@ -246,7 +288,7 @@ type RecordKey struct {
 
 // Key converts a RecordConfig into a RecordKey.
 func (rc *RecordConfig) Key() RecordKey {
-	return RecordKey{rc.Name, rc.Type}
+	return RecordKey{rc.GetLabel(), rc.Type}
 }
 
 // Records is a list of *RecordConfig.
@@ -266,10 +308,10 @@ func (r Records) GroupedByLabel() ([]string, map[string]Records) {
 	order := []string{}
 	groups := map[string]Records{}
 	for _, rec := range r {
-		if _, found := groups[rec.Name]; !found {
-			order = append(order, rec.Name)
+		if _, found := groups[rec.GetLabel()]; !found {
+			order = append(order, rec.GetLabel())
 		}
-		groups[rec.Name] = append(groups[rec.Name], rec)
+		groups[rec.GetLabel()] = append(groups[rec.GetLabel()], rec)
 	}
 	return order, groups
 }
@@ -282,11 +324,11 @@ func PostProcessRecords(recs []*RecordConfig) {
 // Downcase converts all labels and targets to lowercase in a list of RecordConfig.
 func downcase(recs []*RecordConfig) {
 	for _, r := range recs {
-		r.Name = strings.ToLower(r.Name)
-		r.NameFQDN = strings.ToLower(r.NameFQDN)
+		r.name = strings.ToLower(r.name)
+		r.nameFQDN = strings.ToLower(r.nameFQDN)
 		switch r.Type {
 		case "ANAME", "CNAME", "MX", "NS", "PTR":
-			r.Target = strings.ToLower(r.Target)
+			r.target = strings.ToLower(r.target)
 		case "A", "AAAA", "ALIAS", "CAA", "IMPORT_TRANSFORM", "SRV", "TLSA", "TXT", "SOA", "CF_REDIRECT", "CF_TEMP_REDIRECT":
 			// Do nothing.
 		default:

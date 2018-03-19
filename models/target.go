@@ -24,7 +24,7 @@ so that it is easy to do things the right way in preparation.
 // GetTargetField returns the target. There may be other fields (for example
 // an MX record also has a .MxPreference field.
 func (rc *RecordConfig) GetTargetField() string {
-	return rc.Target
+	return rc.target
 }
 
 // // GetTargetSingle returns the target for types that have a single value target
@@ -41,7 +41,7 @@ func (rc *RecordConfig) GetTargetIP() net.IP {
 	if rc.Type != "A" && rc.Type != "AAAA" {
 		panic(errors.Errorf("GetTargetIP called on an inappropriate rtype (%s)", rc.Type))
 	}
-	return net.ParseIP(rc.Target)
+	return net.ParseIP(rc.target)
 }
 
 // GetTargetCombined returns a string with the various fields combined.
@@ -49,7 +49,7 @@ func (rc *RecordConfig) GetTargetIP() net.IP {
 func (rc *RecordConfig) GetTargetCombined() string {
 	// If this is a pseudo record, just return the target.
 	if _, ok := dns.StringToType[rc.Type]; !ok {
-		return rc.Target
+		return rc.GetTargetField()
 	}
 
 	// We cheat by converting to a dns.RR and use the String() function.
@@ -73,14 +73,14 @@ func (rc *RecordConfig) GetTargetSortable() string {
 
 // GetTargetDebug returns a string with the various fields spelled out.
 func (rc *RecordConfig) GetTargetDebug() string {
-	content := fmt.Sprintf("%s %s %s %d", rc.Type, rc.NameFQDN, rc.Target, rc.TTL)
+	content := fmt.Sprintf("%s %s %s %d", rc.Type, rc.GetLabelFQDN(), rc.GetTargetField(), rc.TTL)
 	switch rc.Type { // #rtype_variations
 	case "A", "AAAA", "CNAME", "NS", "PTR", "TXT":
 		// Nothing special.
 	case "MX":
 		content += fmt.Sprintf(" pref=%d", rc.MxPreference)
 	case "SOA":
-		content = fmt.Sprintf("%s %s %s %d", rc.Type, rc.Name, rc.Target, rc.TTL)
+		content = fmt.Sprintf("%s %s %s %d", rc.Type, rc.GetLabel(), rc.GetTargetField(), rc.TTL)
 	case "SRV":
 		content += fmt.Sprintf(" srvpriority=%d srvweight=%d srvport=%d", rc.SrvPriority, rc.SrvWeight, rc.SrvPort)
 	case "TLSA":
@@ -102,7 +102,7 @@ func (rc *RecordConfig) GetTargetDebug() string {
 
 // SetTarget sets the target, assuming that the rtype is appropriate.
 func (rc *RecordConfig) SetTarget(target string) error {
-	rc.Target = target
+	rc.target = target
 	return nil
 }
 

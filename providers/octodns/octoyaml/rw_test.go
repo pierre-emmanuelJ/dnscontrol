@@ -18,10 +18,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"unicode"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/tdewolff/minify"
 	minjson "github.com/tdewolff/minify/json"
 )
@@ -104,8 +104,6 @@ func TestYamlRead(t *testing.T) {
 
 	// Read a .YAML and make sure it matches the RecordConfig (.JSON).
 
-	minifyFlag := true
-
 	files, err := ioutil.ReadDir(testDir)
 	if err != nil {
 		t.Fatal(err)
@@ -116,9 +114,6 @@ func TestYamlRead(t *testing.T) {
 			continue
 		}
 		basename := f.Name()[:len(f.Name())-5] // remove ".yaml"
-
-		m := minify.New()
-		m.AddFunc("json", minjson.Minify)
 
 		t.Run(f.Name(), func(t *testing.T) {
 
@@ -136,8 +131,6 @@ func TestYamlRead(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			//fmt.Printf("DEBUG: CONTENT=%s\n", string(content))
-			//fmt.Printf("DEBUG: RECS=%v\n", recs)
 
 			// YAML -> JSON
 
@@ -145,14 +138,14 @@ func TestYamlRead(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if minifyFlag {
-				// fmt.Printf("DEBUG: actualJSON-full: %s\n", actualJSON)
-				actualJSON, err = m.Bytes("json", actualJSON)
-			}
 			if err != nil {
 				t.Fatal(err)
 			}
-			// fmt.Printf("DEBUG: actualJSON-mini: %s\n", actualJSON)
+			var actualI []interface{}
+			err = json.Unmarshal(actualJSON, &actualI)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			// Read expected JSON
 			expectedFile := filepath.Join(testDir, basename+".json")
@@ -165,24 +158,13 @@ func TestYamlRead(t *testing.T) {
 				}
 				t.Fatal(err)
 			}
-			var expectedJSON string
-			if minifyFlag {
-				expectedJSON, err = m.String("json", string(expectedData))
-			} else {
-				expectedJSON = string(expectedData)
-			}
+			var expectedI []interface{}
+			err = json.Unmarshal(expectedData, &expectedI)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			//fmt.Printf("DEBUG: EXPECTED=%s\n", string(expectedJSON))
-			//fmt.Printf("DEBUG: ACTUAL  =%s\n", string(actualJSON))
-
-			if strings.TrimSpace(string(expectedJSON)) != strings.TrimSpace(string(actualJSON)) {
-				t.Error("Expected and actual json don't match")
-				t.Log("Expected:", string(expectedJSON))
-				t.Log("Actual  :", string(actualJSON))
-			}
+			assert.Equal(t, expectedI, actualI)
 		})
 	}
 }
