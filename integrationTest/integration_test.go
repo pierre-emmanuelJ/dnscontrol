@@ -81,6 +81,9 @@ func getDomainConfigWithNameservers(t *testing.T, prv providers.DNSServiceProvid
 	}
 	dc.Nameservers = ns
 	nameservers.AddNSRecords(dc)
+	for _, r := range dc.Records {
+		fmt.Printf("DEBUG: getDCwNS %v\n", r)
+	}
 	return dc
 }
 
@@ -181,6 +184,9 @@ func TestDualProviders(t *testing.T) {
 	dc.Records = []*models.RecordConfig{}
 	dc.Nameservers = append(dc.Nameservers, models.StringsToNameservers([]string{"ns1.otherdomain.tld", "ns2.otherdomain.tld"})...)
 	nameservers.AddNSRecords(dc)
+	for _, r := range dc.Records {
+		fmt.Printf("DEBUG: getDCwNS %v\n", r)
+	}
 	t.Log("Adding nameservers from another provider")
 	run()
 	// run again to make sure no corrections
@@ -189,6 +195,10 @@ func TestDualProviders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for _, r := range dc.Records {
+		fmt.Printf("DEBUG: getDCwNS2 %v\n", r)
+	}
+
 	if len(cs) != 0 {
 		t.Logf("Expect no corrections on second run, but found %d.", len(cs))
 		for i, c := range cs {

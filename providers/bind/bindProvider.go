@@ -294,6 +294,7 @@ func (c *Bind) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Correcti
 					}
 					zonefilerecords := make([]dns.RR, 0, len(dc.Records))
 					for _, r := range dc.Records {
+						fmt.Printf("DEBUG: calling ToRR (%+v)\n", r)
 						zonefilerecords = append(zonefilerecords, r.ToRR())
 					}
 					err = WriteZoneFile(zf, zonefilerecords, dc.Name)

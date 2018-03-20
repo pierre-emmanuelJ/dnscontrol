@@ -244,6 +244,7 @@ func (rc *RecordConfig) ToRR() dns.RR {
 		rr.(*dns.MX).Preference = rc.MxPreference
 		rr.(*dns.MX).Mx = rc.GetTargetField()
 	case dns.TypeNS:
+		fmt.Printf("DEBUG: ToRR NS: %v\n", rc.GetTargetField())
 		rr.(*dns.NS).Ns = rc.GetTargetField()
 	case dns.TypeSOA:
 		t := strings.Replace(rc.GetTargetField(), `\ `, ` `, -1)
