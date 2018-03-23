@@ -121,15 +121,15 @@ func runTests(t *testing.T, prv providers.DNSServiceProvider, domainName string,
 			//fmt.Printf("DEBUG: pre-models.PostProcessRecords: %+v\n", dom.Records)
 			models.PostProcessRecords(dom.Records)
 			//fmt.Printf("DEBUG: post-models.PostProcessRecords: %+v\n", dom.Records)
-			fmt.Printf("DEBUG: PRE_COPY: %+v\n", dom)
-			for r := range dom.Records {
-				fmt.Printf("DEBUG: REC: %+v\n", r)
-			}
+			//fmt.Printf("DEBUG: PRE_COPY: %+v\n", dom)
+			//for r := range dom.Records {
+			//  fmt.Printf("DEBUG: REC: %+v\n", r)
+			//}
 			dom2, _ := dom.Copy()
-			fmt.Printf("DEBUG: POST_COPY: %+v\n", dom2)
-			for _, r := range dom2.Records {
-				fmt.Printf("DEBUG: REC2: %+v\n", r)
-			}
+			//fmt.Printf("DEBUG: POST_COPY: %+v\n", dom2)
+			//for _, r := range dom2.Records {
+			//	fmt.Printf("DEBUG: REC2: %+v\n", r)
+			//}
 			// get corrections for first time
 			corrections, err := prv.GetDomainCorrections(dom)
 			if err != nil {

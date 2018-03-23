@@ -13,3 +13,4 @@ integrationTest/env.sh
 /integrationTest/config/*.yaml
 env.sh
 certs/
+/.vscode/
