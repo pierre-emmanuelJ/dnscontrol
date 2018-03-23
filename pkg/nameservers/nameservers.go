@@ -60,7 +60,7 @@ func AddNSRecords(dc *models.DomainConfig) {
 			t += "."
 		}
 		rc.SetTarget(t)
-		fmt.Printf("DEBUG: AddNSRecords: %+v\n", rc)
+		//fmt.Printf("DEBUG: AddNSRecords: %+v\n", rc)
 
 		dc.Records = append(dc.Records, rc)
 	}

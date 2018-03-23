@@ -64,9 +64,9 @@ import (
 //
 type RecordConfig struct {
 	Type             string            `json:"type"` // All caps rtype name.
-	name             string            // The short name. See above.
-	nameFQDN         string            // Must end with ".$origin". See above.
-	target           string            // If a name, must end with "."
+	name             string            `json:"-"`    // The short name. See above.
+	nameFQDN         string            `json:"-"`    // Must end with ".$origin". See above.
+	target           string            `json:"-"`    // If a name, must end with "."
 	TTL              uint32            `json:"ttl,omitempty"`
 	Metadata         map[string]string `json:"meta,omitempty"`
 	MxPreference     uint16            `json:"mxpreference,omitempty"`
@@ -102,8 +102,8 @@ func (rc *RecordConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&RecordConfigJSON{
 		RecordConfigAlias: (*RecordConfigAlias)(rc),
 		// Unexported or custom-formatted fields are listed here:
-		Name:   rc.name,
-		Target: rc.target,
+		Name:   rc.GetLabel(),
+		Target: rc.GetTargetField(),
 	})
 }
 
@@ -120,7 +120,7 @@ func (rc *RecordConfig) UnmarshalJSON(data []byte) error {
 	*rc = (RecordConfig)(*(temp).RecordConfigAlias)
 	// Each unexported field must be copied and/or converted individually:
 	rc.name = temp.Name
-	rc.target = temp.Target
+	rc.SetTarget(temp.Target)
 
 	return nil
 }
@@ -129,6 +129,9 @@ func (rc *RecordConfig) UnmarshalJSON(data []byte) error {
 func (rc *RecordConfig) Copy() (*RecordConfig, error) {
 	newR := &RecordConfig{}
 	err := copyObj(rc, newR)
+	newR.name = rc.name
+	newR.nameFQDN = rc.nameFQDN
+	newR.target = rc.target
 	return newR, err
 }
 
@@ -222,7 +225,7 @@ func (rc *RecordConfig) ToRR() dns.RR {
 	rr := dns.TypeToRR[rdtype]()
 
 	// Fill in the header.
-	rr.Header().Name = rc.nameFQDN + "."
+	rr.Header().Name = rc.GetLabelFQDN() + "."
 	rr.Header().Rrtype = rdtype
 	rr.Header().Class = dns.ClassINET
 	rr.Header().Ttl = rc.TTL
@@ -244,7 +247,7 @@ func (rc *RecordConfig) ToRR() dns.RR {
 		rr.(*dns.MX).Preference = rc.MxPreference
 		rr.(*dns.MX).Mx = rc.GetTargetField()
 	case dns.TypeNS:
-		fmt.Printf("DEBUG: ToRR NS: %v\n", rc.GetTargetField())
+		//fmt.Printf("DEBUG: ToRR NS: %v\n", rc.GetTargetField())
 		rr.(*dns.NS).Ns = rc.GetTargetField()
 	case dns.TypeSOA:
 		t := strings.Replace(rc.GetTargetField(), `\ `, ` `, -1)
@@ -325,11 +328,11 @@ func PostProcessRecords(recs []*RecordConfig) {
 // Downcase converts all labels and targets to lowercase in a list of RecordConfig.
 func downcase(recs []*RecordConfig) {
 	for _, r := range recs {
-		r.name = strings.ToLower(r.name)
-		r.nameFQDN = strings.ToLower(r.nameFQDN)
-		switch r.Type {
+		r.name = strings.ToLower(r.GetLabel())
+		r.nameFQDN = strings.ToLower(r.GetLabelFQDN())
+		switch rtype := r.Type; rtype { // #rtype_variations
 		case "ANAME", "CNAME", "MX", "NS", "PTR":
-			r.target = strings.ToLower(r.target)
+			r.SetTarget(strings.ToLower(r.GetTargetField()))
 		case "A", "AAAA", "ALIAS", "CAA", "IMPORT_TRANSFORM", "SRV", "TLSA", "TXT", "SOA", "CF_REDIRECT", "CF_TEMP_REDIRECT":
 			// Do nothing.
 		default:

@@ -33,7 +33,7 @@ func (rc *RecordConfig) GetTargetField() string {
 // 	if rc.Type == "MX" || rc.Type == "SRV" || rc.Type == "CAA" || rc.Type == "TLSA" || rc.Type == "TXT" {
 // 		panic("TargetSingle called on a type with a multi-parameter rtype.")
 // 	}
-// 	return rc.Target
+// 	return rc.target
 // }
 
 // GetTargetIP returns the net.IP stored in Target.
@@ -41,7 +41,7 @@ func (rc *RecordConfig) GetTargetIP() net.IP {
 	if rc.Type != "A" && rc.Type != "AAAA" {
 		panic(errors.Errorf("GetTargetIP called on an inappropriate rtype (%s)", rc.Type))
 	}
-	return net.ParseIP(rc.target)
+	return net.ParseIP(rc.GetTargetField())
 }
 
 // GetTargetCombined returns a string with the various fields combined.
@@ -116,6 +116,6 @@ func (rc *RecordConfig) SetTargetIP(ip net.IP) error {
 // // SetTargetFQDN sets the target to a string, verifying this is an appropriate rtype.
 // func (rc *RecordConfig) SetTargetFQDN(target string) error {
 // 	// TODO(tlim): Verify the rtype is appropriate for an hostname.
-// 	rc.Target = target
+// 	rc.target = target
 // 	return nil
 // }
