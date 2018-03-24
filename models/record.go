@@ -63,10 +63,15 @@ import (
 //  rec.Label() == "@"   // Is this record at the apex?
 //
 type RecordConfig struct {
+	// Unexported fields:
+	//   If you add an unexported field, you'll need to add it to
+	//   special cases in the rest of the code. These places are
+	//   marked with: #unexported_recordconfig
+	name     string // The short name. See above.
+	nameFQDN string // Must end with ".$origin" (no dot). See above.
+	target   string // If a name, must end with "."
+	// Exported Fields:
 	Type             string            `json:"type"` // All caps rtype name.
-	name             string            `json:"-"`    // The short name. See above.
-	nameFQDN         string            `json:"-"`    // Must end with ".$origin". See above.
-	target           string            `json:"-"`    // If a name, must end with "."
 	TTL              uint32            `json:"ttl,omitempty"`
 	Metadata         map[string]string `json:"meta,omitempty"`
 	MxPreference     uint16            `json:"mxpreference,omitempty"`
@@ -85,14 +90,14 @@ type RecordConfig struct {
 }
 
 // RecordConfigAlias is an alias of RecordConfig. We use an alias because aliases
-// are stripped of any functions and we need a struct without
+// don't inhert functions and we need a struct without
 // MarshalJSON/UnmarshalJSON defined, otherwise we'd get a recursive defintion.
 type RecordConfigAlias RecordConfig
 
 // RecordConfigJSON represents out we represent RecordConfig to the JSON package.
 type RecordConfigJSON struct {
 	*RecordConfigAlias // All the exported fields.
-	// The unexported fields all have equivalents here:
+	// The unexported fields all have equivalents here: #unexported_recordconfig
 	Name   string `json:"name"`
 	Target string `json:"target"`
 }
@@ -118,7 +123,7 @@ func (rc *RecordConfig) UnmarshalJSON(data []byte) error {
 
 	// Copy the exported fields:
 	*rc = (RecordConfig)(*(temp).RecordConfigAlias)
-	// Each unexported field must be copied and/or converted individually:
+	// Each unexported field must be copied and/or converted individually: #unexported_recordconfig
 	rc.name = temp.Name
 	rc.SetTarget(temp.Target)
 
@@ -129,9 +134,12 @@ func (rc *RecordConfig) UnmarshalJSON(data []byte) error {
 func (rc *RecordConfig) Copy() (*RecordConfig, error) {
 	newR := &RecordConfig{}
 	err := copyObj(rc, newR)
+	// The unexported fields are not copied by copyObj, therefore
+	// we manually copy them here: #unexported_recordconfig
 	newR.name = rc.name
 	newR.nameFQDN = rc.nameFQDN
 	newR.target = rc.target
+
 	return newR, err
 }
 
@@ -203,12 +211,14 @@ func (rc *RecordConfig) SetLabelFromFQDN(fqdn, origin string) {
 //   domain is "foo.com" then the FQDN is actually "foo.com.foo.com").
 // It will never be "" (the apex is returned as "@").
 func (rc *RecordConfig) GetLabel() string {
+	// Try to keep this to a single line of code so that the function is inlined.
 	return rc.name
 }
 
 // GetLabelFQDN returns the FQDN of the label associated with this RecordConfig.
 // It will not end with ".".
 func (rc *RecordConfig) GetLabelFQDN() string {
+	// Try to keep this to a single line of code so that the function is inlined.
 	return rc.nameFQDN
 }
 
@@ -247,7 +257,6 @@ func (rc *RecordConfig) ToRR() dns.RR {
 		rr.(*dns.MX).Preference = rc.MxPreference
 		rr.(*dns.MX).Mx = rc.GetTargetField()
 	case dns.TypeNS:
-		//fmt.Printf("DEBUG: ToRR NS: %v\n", rc.GetTargetField())
 		rr.(*dns.NS).Ns = rc.GetTargetField()
 	case dns.TypeSOA:
 		t := strings.Replace(rc.GetTargetField(), `\ `, ` `, -1)

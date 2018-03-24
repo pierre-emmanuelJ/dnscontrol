@@ -220,8 +220,6 @@ func (c *Bind) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Correcti
 		// errors will be reported.
 		fmt.Printf("Could not read zonefile: %v\n", err)
 	} else {
-		//x, err := ioutil.ReadAll(foundFH)
-		//fmt.Printf("DEBUG: %v %v\n", err, string(x))
 		for x := range dns.ParseZone(foundFH, dc.Name, zonefile) {
 			if x.Error != nil {
 				log.Println("Error in zonefile:", x.Error)
@@ -293,7 +291,6 @@ func (c *Bind) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Correcti
 					}
 					zonefilerecords := make([]dns.RR, 0, len(dc.Records))
 					for _, r := range dc.Records {
-						//fmt.Printf("DEBUG: calling ToRR (%+v)\n", r)
 						zonefilerecords = append(zonefilerecords, r.ToRR())
 					}
 					err = WriteZoneFile(zf, zonefilerecords, dc.Name)

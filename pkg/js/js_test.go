@@ -39,6 +39,8 @@ func TestParsedFiles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			// To make the result comparable to the expected data,
+			// Marshal it as JSON then unmarshal it into a generic structure:
 			actualJSON, err := json.MarshalIndent(conf, "", "  ")
 			if err != nil {
 				t.Fatal(err)
@@ -49,6 +51,7 @@ func TestParsedFiles(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			// Read the expected data into a generic structure:
 			expectedFile := filepath.Join(testDir, f.Name()[:len(f.Name())-3]+".json")
 			expectedData, err := ioutil.ReadFile(expectedFile)
 			if err != nil {

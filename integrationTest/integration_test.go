@@ -81,9 +81,6 @@ func getDomainConfigWithNameservers(t *testing.T, prv providers.DNSServiceProvid
 	}
 	dc.Nameservers = ns
 	nameservers.AddNSRecords(dc)
-	//for _, r := range dc.Records {
-	//  fmt.Printf("DEBUG: getDCwNS %v\n", r)
-	//}
 	return dc
 }
 
@@ -118,18 +115,8 @@ func runTests(t *testing.T, prv providers.DNSServiceProvider, domainName string,
 				dom.Records = append(dom.Records, &rc)
 			}
 			dom.IgnoredLabels = tst.IgnoredLabels
-			//fmt.Printf("DEBUG: pre-models.PostProcessRecords: %+v\n", dom.Records)
 			models.PostProcessRecords(dom.Records)
-			//fmt.Printf("DEBUG: post-models.PostProcessRecords: %+v\n", dom.Records)
-			//fmt.Printf("DEBUG: PRE_COPY: %+v\n", dom)
-			//for r := range dom.Records {
-			//  fmt.Printf("DEBUG: REC: %+v\n", r)
-			//}
 			dom2, _ := dom.Copy()
-			//fmt.Printf("DEBUG: POST_COPY: %+v\n", dom2)
-			//for _, r := range dom2.Records {
-			//	fmt.Printf("DEBUG: REC2: %+v\n", r)
-			//}
 			// get corrections for first time
 			corrections, err := prv.GetDomainCorrections(dom)
 			if err != nil {
@@ -194,9 +181,6 @@ func TestDualProviders(t *testing.T) {
 	dc.Records = []*models.RecordConfig{}
 	dc.Nameservers = append(dc.Nameservers, models.StringsToNameservers([]string{"ns1.otherdomain.tld", "ns2.otherdomain.tld"})...)
 	nameservers.AddNSRecords(dc)
-	//for _, r := range dc.Records {
-	//  fmt.Printf("DEBUG: getDCwNS %v\n", r)
-	//}
 	t.Log("Adding nameservers from another provider")
 	run()
 	// run again to make sure no corrections
@@ -205,9 +189,6 @@ func TestDualProviders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//for _, r := range dc.Records {
-	//  fmt.Printf("DEBUG: getDCwNS2 %v\n", r)
-	//}
 
 	if len(cs) != 0 {
 		t.Logf("Expect no corrections on second run, but found %d.", len(cs))
@@ -224,26 +205,24 @@ type TestCase struct {
 	IgnoredLabels []string
 }
 
+// recAlias enables us to create a struct like rec, but define our own methods on it for Get/Set name/target
 type recAlias models.RecordConfig
 type rec struct {
 	*recAlias
 }
 
 func (r *rec) GetLabel() string {
-	//return r.GetLabel()
+	// Reach into the rec, get the recAlias, convert it to a models.RecordConfig, and call .GetLabel().
 	return ((*models.RecordConfig)((*r).recAlias)).GetLabel()
 }
 
 func (r *rec) SetLabel(label, domain string) {
-	//r.Name = label
-	//r.NameFQDN = dnsutil.AddOrigin(label, "**current-domain**")
-
 	// Reach into the rec, get the recAlias, convert it to a models.RecordConfig, and call .SetLabel().
 	((*models.RecordConfig)((*r).recAlias)).SetLabel(label, domain)
 }
 
 func (r *rec) SetTarget(target string) {
-	//r.Target = target
+	// Reach into the rec, get the recAlias, convert it to a models.RecordConfig, and call .SetTarget().
 	((*models.RecordConfig)((*r).recAlias)).SetTarget(target)
 }
 
@@ -329,7 +308,6 @@ func makeRec(name, target, typ string) *rec {
 	r.TTL = 300
 	r.SetLabel(name, "**current-domain**")
 	r.SetTarget(target)
-	//fmt.Printf("DEBUG: makeRec=%+v\n", *r.recAlias)
 	return r
 }
 

@@ -72,8 +72,8 @@ func TestDowncase(t *testing.T) {
 		&RecordConfig{Type: "MX"},
 	}}
 	dc.Records[0].SetLabel("lower", "example.tld")
-	dc.Records[1].SetLabel("UPPER", "example.tld")
 	dc.Records[0].SetTarget("targetmx")
+	dc.Records[1].SetLabel("UPPER", "example.tld")
 	dc.Records[1].SetTarget("TARGETMX")
 	downcase(dc.Records)
 	if !dc.HasRecordTypeName("MX", "lower") {

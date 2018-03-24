@@ -43,12 +43,13 @@ func (dc *DomainConfig) Copy() (*DomainConfig, error) {
 	newDc.RegistrarInstance = reg
 	dc.DNSProviderInstances = dnsps
 	newDc.DNSProviderInstances = dnsps
-
+	// Copy the unexported fields within RecordConfig: #unexported_recordconfig
 	for i, rec := range dc.Records {
 		newDc.Records[i].name = rec.name
 		newDc.Records[i].nameFQDN = rec.nameFQDN
 		newDc.Records[i].target = rec.target
 	}
+
 	return newDc, err
 }
 

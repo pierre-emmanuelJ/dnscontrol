@@ -18,10 +18,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"unicode"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/tdewolff/minify"
 	minjson "github.com/tdewolff/minify/json"
 )
@@ -33,6 +33,18 @@ const (
 
 func init() {
 	os.Chdir("../..") // go up a directory so we helpers.js is in a consistent place.
+}
+
+// JSONBytesEqual compares the JSON in two byte slices.
+func JSONBytesEqual(a, b []byte) (bool, error) {
+	var j, j2 interface{}
+	if err := json.Unmarshal(a, &j); err != nil {
+		return false, err
+	}
+	if err := json.Unmarshal(b, &j2); err != nil {
+		return false, err
+	}
+	return reflect.DeepEqual(j2, j), nil
 }
 
 func TestYamlWrite(t *testing.T) {
@@ -104,6 +116,8 @@ func TestYamlRead(t *testing.T) {
 
 	// Read a .YAML and make sure it matches the RecordConfig (.JSON).
 
+	minifyFlag := true
+
 	files, err := ioutil.ReadDir(testDir)
 	if err != nil {
 		t.Fatal(err)
@@ -114,6 +128,9 @@ func TestYamlRead(t *testing.T) {
 			continue
 		}
 		basename := f.Name()[:len(f.Name())-5] // remove ".yaml"
+
+		m := minify.New()
+		m.AddFunc("json", minjson.Minify)
 
 		t.Run(f.Name(), func(t *testing.T) {
 
@@ -138,11 +155,9 @@ func TestYamlRead(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err != nil {
-				t.Fatal(err)
+			if minifyFlag {
+				actualJSON, err = m.Bytes("json", actualJSON)
 			}
-			var actualI []interface{}
-			err = json.Unmarshal(actualJSON, &actualI)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -158,13 +173,22 @@ func TestYamlRead(t *testing.T) {
 				}
 				t.Fatal(err)
 			}
-			var expectedI []interface{}
-			err = json.Unmarshal(expectedData, &expectedI)
+
+			var expectedJSON []byte
+			if minifyFlag {
+				expectedJSON, err = m.Bytes("json", expectedData)
+			} else {
+				expectedJSON = expectedData
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			assert.Equal(t, expectedI, actualI)
+			if b, err := JSONBytesEqual(expectedJSON, actualJSON); (!b) || (err != nil) {
+				t.Error("Expected and actual json don't match")
+				t.Log("Expected:", string(expectedJSON))
+				t.Log("Actual  :", string(actualJSON))
+			}
 		})
 	}
 }

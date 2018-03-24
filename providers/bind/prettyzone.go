@@ -169,8 +169,6 @@ func (z *zoneGenData) generateZoneFileHelper(w io.Writer) error {
 		}
 		hdr := rr.Header()
 
-		//fmt.Printf("DEBUG: hdr = %v", hdr.String())
-
 		items := strings.SplitN(line, "\t", 5)
 		if len(items) < 5 {
 			log.Fatalf("Too few items in: %v", line)
@@ -203,7 +201,6 @@ func (z *zoneGenData) generateZoneFileHelper(w io.Writer) error {
 
 		// items[4]: the remaining line
 		target := items[4]
-		//fmt.Printf("DEBUG: items = %v\n", items)
 
 		fmt.Fprintln(w, formatLine([]int{10, 5, 2, 5, 0}, []string{name, ttl, "IN", typeStr, target}))
 	}
